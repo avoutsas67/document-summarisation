@@ -59,7 +59,7 @@ def split_pdf_to_parts(pdf_path, pages_per_part=30):
             pdf_writer.add_page(pdf_reader.pages[page_num])
         
         # Generate output filename
-        part_suffix = f"P{part_num + 1:02d}"  # P01, P02, etc.
+        part_suffix = f"P{part_num}"  # P0, P1, etc.
         output_filename = f"{pdf_path.stem}-{part_suffix}.pdf"
         output_path = output_folder / output_filename
         
@@ -77,7 +77,7 @@ def split_pdf_to_parts(pdf_path, pages_per_part=30):
 
 # %%
 
-def pdf2md(pdf_path: str, endpoint: str, api_key: str, model: str = 'mistral-document-ai-2505', page_offset: int = 0) -> str:
+def pdf2md(pdf_path: str, endpoint: str, api_key: str, model: str = 'mistral-document-ai-2505', page_offset: int = 0, part: int=0) -> str:
     """
     Simplest possible example of using Mistral OCR
     
@@ -112,22 +112,27 @@ def pdf2md(pdf_path: str, endpoint: str, api_key: str, model: str = 'mistral-doc
     result = response.json()
    
     # Step 4: Extract content
+    md_images_dir = 'images'
     pdf_parent = Path(pdf_path).parent
     pdf_stem = Path(pdf_path).stem
-    md_content_dir = pdf_parent / f"{pdf_stem}"
-    md_content_dir.mkdir(parents=True, exist_ok=True)
+    md_images_path = pdf_parent / md_images_dir
+    md_images_path.mkdir(parents=True, exist_ok=True)
     extracted_text = ""
     for page in result.get("pages", []):
         for img in page.get("images", []):
             # Save image base64 to disk 
             # Create a directory for using the stem of the PDF file
-            img_filename = md_content_dir / img["id"]
+            img_filename_parts =  img["id"].split("-") # Extract filename from id
+            img_filename = f"{img_filename_parts[0]}-{part}.{img_filename_parts[1]}"
+            img_path = md_images_path / img_filename
             img_data = base64.b64decode(img["image_base64"].split(",")[1])
-            with open(img_filename, "wb") as img_file:
+            with open(img_path, "wb") as img_file:
                 img_file.write(img_data)
         page_footer = f"\n\nPage {page['index'] + page_offset + 1} \n\n---\n\n"
         extracted_text += page.get("markdown", "") + page_footer
     # Save the result
+    extracted_text = extracted_text.replace('img-', f'img-{part}.')
+    extracted_text = extracted_text.replace('(img-', f'({md_images_dir}/img-')
     md_path = pdf_parent / f"{pdf_stem}.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(extracted_text)
@@ -148,15 +153,17 @@ if __name__ == "__main__":
 
     # %%
     split_pdf_to_parts(pdf_path, 30)
-    PDF_FILE = "tehdas2-04/tehdas2-04-P01.pdf"  # Path to your PDF file
     md_content = ""
-    for part in pdf_parts:
-        PDF_FILE = output_folder / part['filename']
+    md_images_dir = 'images'
+    for part_id in range(len(pdf_parts)):
         try:
+            part_filename = pdf_parts[part_id]['filename']
+            part_offset = pdf_parts[part_id]['pages'][0]
+            PDF_FILE = output_folder / part_filename
             print(f"Processing: {PDF_FILE}")
-            extracted_text = pdf2md(PDF_FILE, endpoint=endpoint, api_key=api_key, model=model, page_offset=part['pages'][0])
+            extracted_text = pdf2md(PDF_FILE, endpoint=endpoint, api_key=api_key, model=model, page_offset=part_offset, part=part_id)
             md_content += extracted_text
-            print("✓ OCR completed successfully for part:", part['filename'])
+            print("✓ OCR completed successfully for part:", part_filename) 
 
         except FileNotFoundError:
             print(f"Error: PDF file '{PDF_FILE}' not found")
@@ -165,6 +172,7 @@ if __name__ == "__main__":
             print(f"Response: {e.response.text}")
         except Exception as e:
             print(f"Error: {e}")
+    md_content = md_content.replace(f'({md_images_dir}',f'({output_folder.stem}/{md_images_dir}')
     md_path = output_folder.parent / f"{pdf_path.stem}.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(md_content)
