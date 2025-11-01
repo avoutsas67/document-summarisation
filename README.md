@@ -140,6 +140,16 @@ Complete processing pipeline: convert, extract TOC, and generate summary.
 - `mistralai` - Mistral AI Python client for OCR and chat completion
 - `PyPDF2` - PDF file handling utilities
 
+## Testing
+
+Run the unit tests:
+
+```bash
+python -m unittest test_pdf_to_markdown.py -v
+```
+
+The tests use mocking to avoid requiring an actual Mistral API key during testing.
+
 ## Error Handling
 
 The tool includes comprehensive error handling for:
