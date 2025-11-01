@@ -9,7 +9,7 @@ import os
 import sys
 import base64
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from mistralai import Mistral
 
 
@@ -22,6 +22,9 @@ class PDFToMarkdownConverter:
     - Table of contents extraction
     - Document summary generation
     """
+    
+    # Maximum characters from document to use for summary generation
+    MAX_SUMMARY_CONTENT_LENGTH = 4000
     
     def __init__(self, api_key: Optional[str] = None):
         """
@@ -132,11 +135,14 @@ class PDFToMarkdownConverter:
             Generated summary text
         """
         # Prepare the prompt for summarization
+        # Limit content to avoid token limits
+        content_preview = markdown_content[:self.MAX_SUMMARY_CONTENT_LENGTH]
+        
         prompt = f"""Please provide a concise summary of the following document. 
 Focus on the main topics, key points, and overall purpose of the document.
 
 Document content:
-{markdown_content[:4000]}  # Limit content to avoid token limits
+{content_preview}
 
 Please provide a summary:"""
         
@@ -154,7 +160,7 @@ Please provide a summary:"""
         
         return response.choices[0].message.content
     
-    def process_pdf(self, pdf_path: str, output_dir: Optional[str] = None) -> Dict[str, any]:
+    def process_pdf(self, pdf_path: str, output_dir: Optional[str] = None) -> Dict[str, Any]:
         """
         Complete processing pipeline: convert PDF to markdown, extract TOC, and generate summary.
         
