@@ -18,3 +18,15 @@ wheels/
 
 # UV
 uv.lock
+
+# Archives
+**/*.zip
+**/*.tar.gz
+**/*.tar
+**/*.7z
+
+# Content
+**/tehdas*
+
+# OS files
+**/.DS_Store

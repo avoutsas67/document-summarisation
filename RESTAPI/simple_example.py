@@ -147,34 +147,34 @@ if __name__ == "__main__":
     endpoint = AZ_MISTRAL_DOC_AI_2505_ENDPOINT
     # Example usage:
     # Split the current PDF into 30-page parts
+    for i in range (11):
+        pdf_path = Path(f"tehdas2-{i+1:02d}.pdf")
+        output_folder, pdf_parts, pages, metadata = split_pdf_to_parts(pdf_path, 30)
+        md_content = ""
+        md_images_dir = 'images'
+        for part_id in range(len(pdf_parts)):
+            try:
+                part_filename = pdf_parts[part_id]['filename']
+                part_offset = pdf_parts[part_id]['pages'][0]
+                PDF_FILE = output_folder / part_filename
+                print(f"Processing: {PDF_FILE}")
+                extracted_text = pdf2md(PDF_FILE, endpoint=endpoint, api_key=api_key, model=model, page_offset=part_offset, part=part_id)
+                md_content += extracted_text
+                print("✓ OCR completed successfully for part:", part_filename) 
 
-    pdf_path = Path("tehdas2-04.pdf")
-    output_folder, pdf_parts, pages, metadata = split_pdf_to_parts(pdf_path, 30)
+            except FileNotFoundError:
+                print(f"Error: PDF file '{PDF_FILE}' not found")
+            except requests.exceptions.HTTPError as e:
+                print(f"API Error: {e}")
+                print(f"Response: {e.response.text}")
+            except Exception as e:
+                print(f"Error: {e}")
+        md_content = md_content.replace(f'({md_images_dir}',f'({output_folder.stem}/{md_images_dir}')
+        md_path = output_folder.parent / f"{pdf_path.stem}.md"
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write(md_content)
 
-    # %%
-    split_pdf_to_parts(pdf_path, 30)
-    md_content = ""
-    md_images_dir = 'images'
-    for part_id in range(len(pdf_parts)):
-        try:
-            part_filename = pdf_parts[part_id]['filename']
-            part_offset = pdf_parts[part_id]['pages'][0]
-            PDF_FILE = output_folder / part_filename
-            print(f"Processing: {PDF_FILE}")
-            extracted_text = pdf2md(PDF_FILE, endpoint=endpoint, api_key=api_key, model=model, page_offset=part_offset, part=part_id)
-            md_content += extracted_text
-            print("✓ OCR completed successfully for part:", part_filename) 
-
-        except FileNotFoundError:
-            print(f"Error: PDF file '{PDF_FILE}' not found")
-        except requests.exceptions.HTTPError as e:
-            print(f"API Error: {e}")
-            print(f"Response: {e.response.text}")
-        except Exception as e:
-            print(f"Error: {e}")
-    md_content = md_content.replace(f'({md_images_dir}',f'({output_folder.stem}/{md_images_dir}')
-    md_path = output_folder.parent / f"{pdf_path.stem}.md"
-    with open(md_path, "w", encoding="utf-8") as f:
-        f.write(md_content)
-
+# %%
+for i in range(1, 11):
+    print(f"Doc id:{i:02d}")
 # %%
